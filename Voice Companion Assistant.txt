@@ -1,0 +1,109 @@
+import openai
+import pyttsx3
+import speech_recognition as sr
+import os
+import webbrowser
+
+# Load OpenAI API key from environment variable
+openai.api_key = os.getenv('OPENAI_API_KEY')  # Ensure you set this variable in your system
+
+# Initialize text-to-speech engine
+engine = pyttsx3.init()
+
+def speak(text):
+    """Convert text to speech."""
+    engine.say(text)
+    engine.runAndWait()
+
+def listen():
+    """Capture voice input and convert to text."""
+    recognizer = sr.Recognizer()
+    with sr.Microphone() as source:
+        print("Listening...")
+        try:
+            audio = recognizer.listen(source, timeout=10, phrase_time_limit=10)
+            print("Processing...")
+            query = recognizer.recognize_google(audio)
+            return query.lower()
+        except sr.UnknownValueError:
+            print("Could not understand the audio.")
+            return "I couldn't understand that."
+        except sr.RequestError as e:
+            print(f"Speech Recognition error: {e}")
+            return f"Speech Recognition error: {e}"
+        except Exception as e:
+            print(f"Error: {e}")
+            return "Something went wrong."
+
+def ai_response(prompt):
+    """Get AI response from OpenAI."""
+    try:
+        response = openai.ChatCompletion.create(
+            model="gpt-4",  # Change to "gpt-3.5-turbo" if you’re using GPT-3.5
+            messages=[
+                {"role": "system", "content": "You are a helpful assistant."},
+                {"role": "user", "content": prompt}
+            ]
+        )
+        return response.choices[0].message.content.strip()
+    except Exception as e:
+        print(f"Error in AI response: {e}")
+        return "Sorry, I couldn't process your request."
+
+def open_application(app_name):
+    """Open common applications or websites."""
+    try:
+        if "youtube" in app_name:
+            speak("Opening YouTube.")
+            webbrowser.open("https://www.youtube.com")
+        elif "chrome" in app_name:
+            chrome_path = r"C:\Program Files\Google\Chrome\Application\chrome.exe"
+            if os.path.exists(chrome_path):
+                os.startfile(chrome_path)
+                speak("Opening Google Chrome.")
+            else:
+                speak("Chrome path not found.")
+        elif "notepad" in app_name:
+            os.system("notepad")
+            speak("Opening Notepad.")
+        elif "calculator" in app_name:
+            os.system("calc")
+            speak("Opening Calculator.")
+        else:
+            # Try generic open
+            os.system(f"start {app_name}")
+            speak(f"Attempting to open {app_name}.")
+    except Exception as e:
+        print(f"Error opening {app_name}: {e}")
+        speak(f"Could not open {app_name}. Check the logs for details.")
+
+def main():
+    speak("Hi, I am your voice assistant. How can I help you?")
+    while True:
+        user_input = listen()
+        print(f"You said: {user_input}")
+
+        # Check if the user wants to exit
+        if "exit" in user_input or "quit" in user_input:
+            speak("Goodbye!")
+            break
+
+        # Respond to the specific query about the developer
+        elif "who developed you" in user_input:
+            speak("I was developed by Kabir Mohsin.")
+            print("I was developed by Kabir Mohsin.")
+
+        # Open applications if requested
+        elif "open" in user_input:
+            app_name = user_input.replace("open ", "").strip()
+            open_application(app_name)
+
+        # General queries handled by AI
+        else:
+            speak("Let me think about that.")
+            ai_reply = ai_response(user_input)
+            print(f"AI Reply: {ai_reply}")
+            speak(ai_reply)
+
+if __name__ == "__main__":
+    main()
